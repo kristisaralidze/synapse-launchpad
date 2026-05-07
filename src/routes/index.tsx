@@ -118,16 +118,21 @@ function TargetsPage() {
                 </div>
               </div>
 
-              <div className="w-20 flex flex-col items-start">
-                <span className="text-[11px] text-[var(--color-text-tertiary)]">Score</span>
-                <span
-                  className="font-mono text-[22px] font-semibold leading-none mt-0.5"
-                  style={{ color: scoreColor(t.scoreLabel) }}
-                >
-                  {t.score}
-                </span>
-                <span className="text-[11px] text-[var(--color-text-tertiary)] mt-1">{t.scoreLabel}</span>
-              </div>
+              {(() => {
+                const s = scores[t.id] ?? 65;
+                return (
+                  <div className="w-20 flex flex-col items-start">
+                    <span className="text-[11px] text-[var(--color-text-tertiary)]">Score</span>
+                    <span
+                      className="font-mono text-[22px] font-semibold leading-none mt-0.5"
+                      style={{ color: scoreColor(s) }}
+                    >
+                      {s}
+                    </span>
+                    <span className="text-[11px] text-[var(--color-text-tertiary)] mt-1">{scoreLabel(s)}</span>
+                  </div>
+                );
+              })()}
 
               <button
                 onClick={() => setLaunchTarget(t)}
