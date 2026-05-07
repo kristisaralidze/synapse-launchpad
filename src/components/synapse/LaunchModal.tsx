@@ -1,29 +1,13 @@
 import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogOverlay,
-  DialogPortal,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogOverlay, DialogPortal } from "@/components/ui/dialog";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "@tanstack/react-router";
 import type { Target } from "@/lib/synapse/types";
+import { API_BASE } from "@/lib/synapse/supabase";
 
-const SCENARIOS = [
-  "Conference Followup",
-  "Invoice",
-  "IT Reset",
-  "Manager Request",
-  "Vendor Message",
-] as const;
+const SCENARIOS = ["Conference Followup", "Invoice", "IT Reset", "Manager Request", "Vendor Message"] as const;
 
 export function LaunchModal({
   target,
@@ -47,16 +31,18 @@ export function LaunchModal({
     try {
       let campaignId: string | undefined;
       try {
-        const res = await fetch("https://hackathon-plum-seven.vercel.app/api/campaign/start", {
+        const res = await fetch(`${API_BASE}/api/campaign/start`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ target_id: target.id, scenario, demo_mode: demoMode }),
         });
         if (res.ok) {
           const data = await res.json().catch(() => ({}));
-          campaignId = data?.data?.campaign?.id ?? data?.campaign_id;
+          campaignId = data?.data?.campaign?.id ?? data?.data?.campaign_id ?? data?.campaign_id ?? data?.data?.id;
         }
-      } catch { /* fallback to mock */ }
+      } catch {
+        /* fallback to mock */
+      }
       if (!campaignId) campaignId = `mock-${Date.now()}`;
       onOpenChange(false);
       navigate({ to: "/live/$campaignId", params: { campaignId } });

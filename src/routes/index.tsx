@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { AppShell } from "@/components/synapse/AppShell";
 import { LaunchModal } from "@/components/synapse/LaunchModal";
 import { scoreColor, scoreLabel, type Target } from "@/lib/synapse/types";
-import { API_BASE } from "@/lib/synapse/supabase";
+import { supabase } from "@/lib/synapse/supabase";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -16,9 +16,21 @@ export const Route = createFileRoute("/")({
 });
 
 const FALLBACK_TARGETS: Target[] = [
-  { id: "t-001", name: "Jasper Gräfe", email: "jasper.graefe@celonis.com", company: "Celonis", role: "Customer Success Manager" },
+  {
+    id: "t-001",
+    name: "Jasper Gräfe",
+    email: "jasper.graefe@celonis.com",
+    company: "Celonis",
+    role: "Customer Success Manager",
+  },
   { id: "t-002", name: "Anna Weber", email: "anna.weber@celonis.com", company: "Celonis", role: "Engineering Lead" },
-  { id: "t-003", name: "Marc Lindqvist", email: "marc.lindqvist@celonis.com", company: "Celonis", role: "Sales Director" },
+  {
+    id: "t-003",
+    name: "Marc Lindqvist",
+    email: "marc.lindqvist@celonis.com",
+    company: "Celonis",
+    role: "Sales Director",
+  },
 ];
 
 const FALLBACK_SCORES: Record<string, number> = {
@@ -28,7 +40,12 @@ const FALLBACK_SCORES: Record<string, number> = {
 };
 
 function initials(name: string) {
-  return name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
 }
 
 function TargetsPage() {
@@ -38,40 +55,60 @@ function TargetsPage() {
   const [launchTarget, setLaunchTarget] = useState<Target | null>(null);
 
   useEffect(() => {
-    if (!API_BASE) return;
-    fetch(`${API_BASE}/api/targets`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => {
-        if (!data?.data?.length) return;
-        const fetched: Target[] = data.data;
-        setTargets(fetched);
-        // fetch scores for each target
-        Promise.all(
-          fetched.map((t) =>
-            fetch(`${API_BASE}/api/scores/${t.id}`)
-              .then((r) => r.ok ? r.json() : null)
-              .then((s) => s?.data?.score != null ? [t.id, s.data.score] as [string, number] : null)
-              .catch(() => null)
-          )
-        ).then((results) => {
-          const scoreMap: Record<string, number> = {};
-          for (const r of results) {
-            if (r) scoreMap[r[0]] = r[1];
-          }
-          if (Object.keys(scoreMap).length > 0) setScores(scoreMap);
-        });
+    async function loadFromSupabase() {
+      const [{ data: fetchedTargets }, { data: fetchedScores }] = await Promise.all([
+        supabase
+          .from("targets")
+          .select("id,name,email,company,role,created_at")
+          .order("created_at", { ascending: false }),
+        supabase.from("scores").select("target_id,score"),
+      ]);
+
+      if (fetchedTargets?.length) setTargets(fetchedTargets as Target[]);
+
+      if (fetchedScores?.length) {
+        const scoreMap: Record<string, number> = {};
+        for (const row of fetchedScores as { target_id: string; score: number }[]) {
+          scoreMap[row.target_id] = row.score;
+        }
+        setScores(scoreMap);
+      }
+    }
+
+    loadFromSupabase().catch(() => {
+      /* keep fallback */
+    });
+
+    const scoresSub = supabase
+      .channel("targets-page-scores")
+      .on("postgres_changes", { event: "*", schema: "public", table: "scores" }, (payload) => {
+        const row = payload.new as { target_id?: string; score?: number };
+        if (!row?.target_id || typeof row.score !== "number") return;
+        setScores((prev) => ({ ...prev, [row.target_id!]: row.score! }));
       })
-      .catch(() => { /* keep fallback */ });
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(scoresSub);
+    };
   }, []);
 
-  function handleAdd(e: React.FormEvent) {
+  async function handleAdd(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name || !form.email) return;
-    const t: Target = {
-      id: `t-${Math.random().toString(36).slice(2, 8)}`,
-      ...form,
-    };
-    setTargets((prev) => [...prev, t]);
+
+    const { data, error } = await supabase
+      .from("targets")
+      .insert({ name: form.name, email: form.email, company: form.company, role: form.role })
+      .select("id,name,email,company,role,created_at")
+      .single();
+
+    if (error || !data) return;
+
+    const t = data as Target;
+    setTargets((prev) => [t, ...prev]);
+    setScores((prev) => ({ ...prev, [t.id]: 100 }));
+    await supabase.from("scores").insert({ target_id: t.id, score: 100, reason: "initial" });
     setForm({ name: "", email: "", company: "", role: "" });
   }
 
@@ -171,11 +208,7 @@ function TargetsPage() {
         </div>
       </section>
 
-      <LaunchModal
-        target={launchTarget}
-        open={!!launchTarget}
-        onOpenChange={(v) => !v && setLaunchTarget(null)}
-      />
+      <LaunchModal target={launchTarget} open={!!launchTarget} onOpenChange={(v) => !v && setLaunchTarget(null)} />
     </AppShell>
   );
 }

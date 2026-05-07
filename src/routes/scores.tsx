@@ -1,19 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ArrowDown, ArrowUp } from "lucide-react";
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { animate, useMotionValue, useTransform, motion } from "framer-motion";
 import { AppShell } from "@/components/synapse/AppShell";
 import { mockSeries, mockTargets, tierFor, type ScoreTarget } from "@/lib/synapse/mockScores";
+import { supabase } from "@/lib/synapse/supabase";
 
 export const Route = createFileRoute("/scores")({
   head: () => ({
@@ -226,6 +218,53 @@ function TargetCard({ t }: { t: ScoreTarget }) {
 }
 
 function ScoresPage() {
+  const [targets, setTargets] = useState<ScoreTarget[]>(mockTargets);
+
+  useEffect(() => {
+    async function loadScores() {
+      const [{ data: targetRows }, { data: scoreRows }] = await Promise.all([
+        supabase.from("targets").select("id,name,company,role"),
+        supabase.from("scores").select("target_id,score"),
+      ]);
+
+      if (!targetRows?.length) return;
+
+      const scoreByTarget = new Map<string, number>();
+      for (const row of (scoreRows ?? []) as { target_id: string; score: number }[]) {
+        scoreByTarget.set(row.target_id, row.score);
+      }
+
+      setTargets(
+        (targetRows as { id: string; name: string; company: string; role: string }[]).map((t) => ({
+          id: t.id,
+          name: t.name,
+          company: t.company,
+          role: t.role,
+          score: scoreByTarget.get(t.id) ?? 100,
+          weak: "pending analysis",
+          strong: "pending analysis",
+        })),
+      );
+    }
+
+    loadScores().catch(() => {
+      /* keep mock scores */
+    });
+
+    const scoresSub = supabase
+      .channel("scores-dashboard")
+      .on("postgres_changes", { event: "*", schema: "public", table: "scores" }, (payload) => {
+        const row = payload.new as { target_id?: string; score?: number };
+        if (!row?.target_id || typeof row.score !== "number") return;
+        setTargets((prev) => prev.map((t) => (t.id === row.target_id ? { ...t, score: row.score! } : t)));
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(scoresSub);
+    };
+  }, []);
+
   return (
     <AppShell>
       <header className="flex items-end justify-between">
@@ -234,7 +273,7 @@ function ScoresPage() {
             Scores
           </h1>
           <p className="mt-2 text-[14px] text-[var(--color-text-secondary)]">
-            Aggregate human firewall health across {mockTargets.length} employees.
+            Aggregate human firewall health across {targets.length} employees.
           </p>
         </div>
         <div className="text-[13px] text-[var(--color-text-tertiary)]" style={TNUM}>
@@ -257,12 +296,10 @@ function ScoresPage() {
       <section className="mt-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-[16px] font-semibold text-[var(--color-text-primary)]">By target</h2>
-          <span className="text-[13px] text-[var(--color-text-tertiary)]">
-            {mockTargets.length} employees
-          </span>
+          <span className="text-[13px] text-[var(--color-text-tertiary)]">{targets.length} employees</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {mockTargets.map((t) => (
+          {targets.map((t) => (
             <TargetCard key={t.id} t={t} />
           ))}
         </div>
