@@ -24,26 +24,29 @@ export function LaunchModal({
   const navigate = useNavigate();
 
   if (!target) return null;
-
   async function handleLaunch() {
     if (!target) return;
     setSubmitting(true);
     try {
       let campaignId: string | undefined;
       try {
-        const res = await fetch(`${API_BASE}/api/campaign/start`, {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        const res = await fetch(`https://hackathon-plum-seven.vercel.app/api/campaign/start`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ target_id: target.id, scenario, demo_mode: demoMode }),
+          signal: controller.signal,
         });
+        clearTimeout(timeout);
         if (res.ok) {
           const data = await res.json().catch(() => ({}));
-          campaignId = data?.data?.campaign?.id ?? data?.data?.campaign_id ?? data?.campaign_id ?? data?.data?.id;
+          campaignId = data?.data?.campaign?.id ?? data?.campaign_id;
         }
       } catch {
-        /* fallback to mock */
+        // timeout or network error — fall through to demo
       }
-      if (!campaignId) campaignId = `mock-${Date.now()}`;
+      if (!campaignId) campaignId = `demo-${target.id}-${Date.now()}`;
       onOpenChange(false);
       navigate({ to: "/live/$campaignId", params: { campaignId } });
     } finally {
