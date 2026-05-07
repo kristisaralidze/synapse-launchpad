@@ -71,15 +71,18 @@ function SpiderInstance({ size, duration, initialDelay }: Instance) {
   );
 }
 
-const LEGS = [
-  { points: "100,90 70,55 40,30 10,15", hip: [100, 90] as const },
-  { points: "100,96 55,80 25,75 5,72", hip: [100, 96] as const },
-  { points: "100,102 55,122 25,130 5,138", hip: [100, 102] as const },
-  { points: "100,108 70,142 40,168 10,185", hip: [100, 108] as const },
-  { points: "100,90 130,55 160,30 190,15", hip: [100, 90] as const },
-  { points: "100,96 145,80 175,75 195,72", hip: [100, 96] as const },
-  { points: "100,102 145,122 175,130 195,138", hip: [100, 102] as const },
-  { points: "100,108 130,142 160,168 190,185", hip: [100, 108] as const },
+// Each leg: hip is at (0,0) after translation; remaining points are deltas.
+// Hip values place the anchor on the body so there is zero gap.
+type LegDef = { hip: [number, number]; rest: [number, number][] };
+const LEGS: LegDef[] = [
+  { hip: [100, 90], rest: [[70, 55], [40, 30], [10, 15]] },   // L1
+  { hip: [100, 96], rest: [[55, 80], [25, 75], [5, 72]] },    // L2
+  { hip: [100, 102], rest: [[55, 122], [25, 130], [5, 138]] },// L3
+  { hip: [100, 108], rest: [[70, 142], [40, 168], [10, 185]] },// L4
+  { hip: [100, 90], rest: [[130, 55], [160, 30], [190, 15]] }, // R1
+  { hip: [100, 96], rest: [[145, 80], [175, 75], [195, 72]] }, // R2
+  { hip: [100, 102], rest: [[145, 122], [175, 130], [195, 138]] }, // R3
+  { hip: [100, 108], rest: [[130, 142], [160, 168], [190, 185]] }, // R4
 ];
 
 function SpiderSVG({ size }: { size: number }) {
@@ -114,32 +117,37 @@ function SpiderSVG({ size }: { size: number }) {
         <circle cx="95" cy="80" r="1.5" fill="#525252" />
         <circle cx="105" cy="80" r="1.5" fill="#525252" />
 
-        {/* Legs — each on its own clock, rotating around its hip */}
+        {/* Legs — each rotates around its hip via SVG translate→rotate trick */}
         {LEGS.map((leg, i) => {
-        const cfg = legConfigs[i];
-        const [hx, hy] = leg.hip;
-        return (
-          <motion.g
-            key={i}
-            style={{ transformOrigin: `${hx}px ${hy}px` }}
-            animate={{ rotate: [-cfg.amplitude, cfg.amplitude, -cfg.amplitude] }}
-            transition={{
-              duration: cfg.duration,
-              delay: cfg.delay,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          >
-            <polyline
-              points={leg.points}
-              stroke="#0A0A0A"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              fill="none"
-            />
-          </motion.g>
-        );
+          const cfg = legConfigs[i];
+          const [hx, hy] = leg.hip;
+          // Convert points to deltas relative to hip (which is at 0,0 after translate)
+          const deltaPoints = [
+            "0,0",
+            ...leg.rest.map(([x, y]) => `${x - hx},${y - hy}`),
+          ].join(" ");
+          return (
+            <g key={i} transform={`translate(${hx} ${hy})`}>
+              <motion.g
+                animate={{ rotate: [-cfg.amplitude, cfg.amplitude, -cfg.amplitude] }}
+                transition={{
+                  duration: cfg.duration,
+                  delay: cfg.delay,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              >
+                <polyline
+                  points={deltaPoints}
+                  stroke="#0A0A0A"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  fill="none"
+                />
+              </motion.g>
+            </g>
+          );
         })}
       </motion.g>
     </svg>
