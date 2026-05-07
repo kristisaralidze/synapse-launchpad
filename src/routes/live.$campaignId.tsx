@@ -180,8 +180,8 @@ function LiveCampaign() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(thoughtsSub);
-      supabase.removeChannel(eventsSub);
+      supabase?.removeChannel(thoughtsSub);
+      supabase?.removeChannel(eventsSub);
     };
   }, [isMock, campaignId]);
 
