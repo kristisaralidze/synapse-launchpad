@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
-import { AmbientSpider } from "../components/AmbientSpider";
+import { AmbientSpiderSwarm } from "../components/AmbientSpiderSwarm";
 
 function NotFoundComponent() {
   return (
@@ -124,7 +124,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
-      <AmbientSpider />
+      <AmbientSpiderSwarm />
     </QueryClientProvider>
   );
 }
