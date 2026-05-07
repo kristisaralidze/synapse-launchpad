@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/select";
 import { useNavigate } from "@tanstack/react-router";
 import type { Target } from "@/lib/synapse/types";
-import { API_BASE } from "@/lib/synapse/supabase";
 
 const SCENARIOS = [
   "Conference Followup",
@@ -47,9 +46,10 @@ export function LaunchModal({
     setSubmitting(true);
     try {
       let campaignId: string | undefined;
-      if (API_BASE) {
+      const base = "https://hackathon-plum-seven.vercel.app";
+      if (base) {
         try {
-          const res = await fetch(`${API_BASE}/api/campaign/start`, {
+          const res = await fetch(`${base}/api/campaign/start`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
