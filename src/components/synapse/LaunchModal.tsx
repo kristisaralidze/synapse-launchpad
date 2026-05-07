@@ -46,26 +46,17 @@ export function LaunchModal({
     setSubmitting(true);
     try {
       let campaignId: string | undefined;
-      const base = "https://hackathon-plum-seven.vercel.app";
-      if (base) {
-        try {
-          const res = await fetch(`${base}/api/campaign/start`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              target_id: target.id,
-              scenario,
-              demo_mode: demoMode,
-            }),
-          });
-          if (res.ok) {
-            const data = await res.json().catch(() => ({}));
-            campaignId = data?.data?.campaign?.id ?? data?.campaign_id;
-          }
-        } catch {
-          /* mock fallback */
+      try {
+        const res = await fetch("https://hackathon-plum-seven.vercel.app/api/campaign/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ target_id: target.id, scenario, demo_mode: demoMode }),
+        });
+        if (res.ok) {
+          const data = await res.json().catch(() => ({}));
+          campaignId = data?.data?.campaign?.id ?? data?.campaign_id;
         }
-      }
+      } catch { /* mock fallback */ }
       if (!campaignId) campaignId = `mock-${Date.now()}`;
       onOpenChange(false);
       navigate({ to: "/live/$campaignId", params: { campaignId } });
