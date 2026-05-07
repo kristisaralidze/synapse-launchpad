@@ -3,20 +3,18 @@ import { motion } from "framer-motion";
 
 type Instance = {
   size: number;
-  right: number;
   duration: number;
   initialDelay: number;
+  laneOffset: number; // perpendicular offset from the diagonal path, in px
 };
 
 const INSTANCES: Instance[] = [
-  { size: 44, right: 16, duration: 6.5, initialDelay: 0.0 },
-  { size: 38, right: 56, duration: 7.2, initialDelay: 1.4 },
-  { size: 50, right: 32, duration: 5.8, initialDelay: 3.0 },
-  { size: 36, right: 80, duration: 8.0, initialDelay: 4.5 },
-  { size: 46, right: 12, duration: 6.0, initialDelay: 6.2 },
+  { size: 22, duration: 9.0, initialDelay: 0.0, laneOffset: 0 },
+  { size: 18, duration: 10.5, initialDelay: 1.6, laneOffset: 40 },
+  { size: 26, duration: 8.4, initialDelay: 3.2, laneOffset: -30 },
+  { size: 16, duration: 11.2, initialDelay: 4.8, laneOffset: 70 },
+  { size: 20, duration: 9.6, initialDelay: 6.4, laneOffset: -55 },
 ];
-
-const TRAIL_COPIES = 5;
 
 export function AmbientSpiderSwarm() {
   const [enabled, setEnabled] = useState(false);
@@ -39,22 +37,25 @@ export function AmbientSpiderSwarm() {
   );
 }
 
-function SpiderInstance({ size, right, duration, initialDelay }: Instance) {
-  const [viewportH, setViewportH] = useState(
-    typeof window === "undefined" ? 1000 : window.innerHeight
+function SpiderInstance({ size, duration, initialDelay, laneOffset }: Instance) {
+  const [vp, setVp] = useState(() =>
+    typeof window === "undefined"
+      ? { w: 1200, h: 800 }
+      : { w: window.innerWidth, h: window.innerHeight }
   );
   const [cycle, setCycle] = useState(0);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const onResize = () => setViewportH(window.innerHeight);
+    const onResize = () =>
+      setVp({ w: window.innerWidth, h: window.innerHeight });
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
   useEffect(() => {
     let cancelled = false;
-    const startDelay = cycle === 0 ? initialDelay : 3 + Math.random() * 3;
+    const startDelay = cycle === 0 ? initialDelay : 1 + Math.random() * 3;
     const totalMs = (startDelay + duration) * 1000;
     const t = setTimeout(() => {
       if (!cancelled) setCycle((c) => c + 1);
@@ -65,71 +66,62 @@ function SpiderInstance({ size, right, duration, initialDelay }: Instance) {
     };
   }, [cycle, duration, initialDelay]);
 
-  const startDelay = cycle === 0 ? initialDelay : 3 + Math.random() * 3;
+  const startDelay = cycle === 0 ? initialDelay : 1 + Math.random() * 3;
+
+  // Diagonal: top-right -> bottom-left
+  // Path direction unit vector
+  const dx = -vp.w - 120;
+  const dy = vp.h + 120;
+  const len = Math.hypot(dx, dy);
+  const ux = dx / len;
+  const uy = dy / len;
+  // Perpendicular (for lane offset)
+  const px = -uy;
+  const py = ux;
+
+  const startX = vp.w + 60 + laneOffset * px;
+  const startY = -60 + laneOffset * py;
+  const endX = -120 + laneOffset * px;
+  const endY = vp.h + 120 + laneOffset * py;
+
+  // Angle the spider so its "head" points along travel direction.
+  // SVG default head-up; rotate so up (-y) aligns with (ux, uy).
+  const angleDeg = (Math.atan2(uy, ux) * 180) / Math.PI + 90;
 
   return (
     <motion.div
       key={cycle}
-      initial={{ y: 0 }}
-      animate={{ y: viewportH + 120 }}
+      initial={{ x: startX, y: startY }}
+      animate={{ x: endX, y: endY }}
       transition={{ duration, ease: "linear", delay: startDelay }}
       style={{
         position: "fixed",
-        top: -60,
-        right,
-        zIndex: 50,
-        pointerEvents: "none",
+        top: 0,
+        left: 0,
         width: size,
         height: size,
+        zIndex: 50,
+        pointerEvents: "none",
+        marginLeft: -size / 2,
+        marginTop: -size / 2,
       }}
       aria-hidden="true"
     >
       <div
         style={{
-          position: "relative",
           width: size,
           height: size,
-          transform: "perspective(500px) rotateX(15deg)",
-          transformStyle: "preserve-3d",
+          transform: `rotate(${angleDeg}deg)`,
         }}
       >
-        {/* underglow */}
-        <div
-          style={{
-            position: "absolute",
-            inset: -12,
-            background:
-              "radial-gradient(circle, rgba(185,28,28,0.18) 0%, transparent 70%)",
-            zIndex: -1,
-            pointerEvents: "none",
-          }}
-        />
-        {/* trail copies */}
-        {Array.from({ length: TRAIL_COPIES }).map((_, n) => (
-          <div
-            key={n}
-            style={{
-              position: "absolute",
-              top: -6 * (n + 1),
-              left: 0,
-              width: size,
-              height: size,
-              opacity: 0.18 / (n + 1),
-              pointerEvents: "none",
-            }}
-          >
-            <SpiderSVG size={size} animate={false} />
-          </div>
-        ))}
-        {/* leading spider */}
-        <div style={{ position: "absolute", inset: 0 }}>
-          <SpiderSVG size={size} animate />
-        </div>
+        <SpiderSVG size={size} />
       </div>
     </motion.div>
   );
 }
 
+// Leg geometry in viewBox 60x60. Body centered at (30,30).
+// Each leg has hip on body edge, knee outside, tip further out.
 type Leg = {
   hip: [number, number];
   knee: [number, number];
@@ -138,66 +130,75 @@ type Leg = {
 };
 
 const LEGS: Leg[] = [
-  { hip: [28, 24], knee: [18, 18], tip: [10, 22], group: "A" }, // L1
-  { hip: [27, 27], knee: [15, 26], tip: [8, 32], group: "B" }, // L2
-  { hip: [27, 30], knee: [15, 34], tip: [8, 42], group: "A" }, // L3
-  { hip: [28, 33], knee: [18, 40], tip: [10, 48], group: "B" }, // L4
-  { hip: [32, 24], knee: [42, 18], tip: [50, 22], group: "B" }, // R1
-  { hip: [33, 27], knee: [45, 26], tip: [52, 32], group: "A" }, // R2
-  { hip: [33, 30], knee: [45, 34], tip: [52, 42], group: "B" }, // R3
-  { hip: [32, 33], knee: [42, 40], tip: [50, 48], group: "A" }, // R4
+  // Left side, front to back
+  { hip: [26, 26], knee: [14, 14], tip: [4, 18], group: "A" },
+  { hip: [25, 30], knee: [10, 28], tip: [2, 32], group: "B" },
+  { hip: [25, 33], knee: [10, 36], tip: [2, 42], group: "A" },
+  { hip: [26, 36], knee: [14, 46], tip: [4, 52], group: "B" },
+  // Right side
+  { hip: [34, 26], knee: [46, 14], tip: [56, 18], group: "B" },
+  { hip: [35, 30], knee: [50, 28], tip: [58, 32], group: "A" },
+  { hip: [35, 33], knee: [50, 36], tip: [58, 42], group: "B" },
+  { hip: [34, 36], knee: [46, 46], tip: [56, 52], group: "A" },
 ];
 
-function SpiderSVG({ size, animate }: { size: number; animate: boolean }) {
+function SpiderSVG({ size }: { size: number }) {
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 60 60"
       aria-hidden="true"
-      style={{ overflow: "visible", display: "block" }}
+      style={{ display: "block", overflow: "visible" }}
     >
-      {/* body first so legs overlap on top */}
-      <ellipse cx="30" cy="24" rx="6" ry="5" fill="#0A0A0A" />
-      <ellipse cx="30" cy="36" rx="8" ry="10" fill="#0A0A0A" />
-      <line x1="30" y1="29" x2="30" y2="31" stroke="#0A0A0A" strokeWidth="1.5" />
-      <circle cx="30" cy="37" r="2" fill="#B91C1C" />
-
+      {/* Legs first (behind body) */}
       {LEGS.map((leg, i) => (
-        <LegGroup key={i} leg={leg} animate={animate} />
+        <LegGroup key={i} leg={leg} />
       ))}
+      {/* Cephalothorax (front, smaller) */}
+      <ellipse cx="30" cy="26" rx="5" ry="4.5" fill="#0A0A0A" />
+      {/* Abdomen (rear, larger) */}
+      <ellipse cx="30" cy="35" rx="6.5" ry="7.5" fill="#0A0A0A" />
+      {/* Red dot marking */}
+      <circle cx="30" cy="36" r="1.6" fill="#B91C1C" />
     </svg>
   );
 }
 
-function LegGroup({ leg, animate }: { leg: Leg; animate: boolean }) {
+function LegGroup({ leg }: { leg: Leg }) {
   const [hx, hy] = leg.hip;
   const [kx, ky] = leg.knee;
   const [tx, ty] = leg.tip;
-  const delay = leg.group === "B" ? 0.25 : 0;
+  const delay = leg.group === "B" ? 0.3 : 0;
 
-  // Translate so hip is at (0,0), then rotation pivots around hip naturally.
-  const k = [kx - hx, ky - hy] as const;
-  const t = [tx - hx, ty - hy] as const;
-
-  const content = (
-    <>
-      <line x1={0} y1={0} x2={k[0]} y2={k[1]} stroke="#0A0A0A" strokeWidth="1.5" strokeLinecap="round" />
-      <line x1={k[0]} y1={k[1]} x2={t[0]} y2={t[1]} stroke="#0A0A0A" strokeWidth="1.5" strokeLinecap="round" />
-    </>
-  );
-
-  if (!animate) {
-    return <g transform={`translate(${hx} ${hy})`}>{content}</g>;
-  }
+  // Translate origin to hip so rotation pivots around the body attachment.
+  const k = [kx - hx, ky - hy];
+  const t = [tx - hx, ty - hy];
 
   return (
     <motion.g
       transform={`translate(${hx} ${hy})`}
-      animate={{ rotate: [-6, 6, -6] }}
-      transition={{ duration: 0.5, repeat: Infinity, ease: "easeInOut", delay }}
+      animate={{ rotate: [-10, 10, -10] }}
+      transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut", delay }}
     >
-      {content}
+      <line
+        x1={0}
+        y1={0}
+        x2={k[0]}
+        y2={k[1]}
+        stroke="#0A0A0A"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+      />
+      <line
+        x1={k[0]}
+        y1={k[1]}
+        x2={t[0]}
+        y2={t[1]}
+        stroke="#0A0A0A"
+        strokeWidth="1"
+        strokeLinecap="round"
+      />
     </motion.g>
   );
 }
