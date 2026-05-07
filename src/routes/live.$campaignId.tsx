@@ -108,28 +108,21 @@ function LiveCampaign() {
   useEffect(() => {
     if (isMock || !supabase) return;
 
-    // Load existing rows first
+    // Load existing rows first (cast to any — tables not yet in generated types)
+    const sb = supabase as unknown as {
+      from: (t: string) => any;
+      channel: (n: string) => any;
+      removeChannel: (c: unknown) => void;
+    };
     Promise.all([
-      supabase
-        .from("agent_thoughts")
-        .select("*")
-        .eq("campaign_id", campaignId)
-        .order("step", { ascending: true }),
-      supabase
-        .from("events")
-        .select("*")
-        .eq("campaign_id", campaignId)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("campaigns")
-        .select("status")
-        .eq("id", campaignId)
-        .single(),
-    ]).then(([thoughtsRes, eventsRes, campaignRes]) => {
-      if (thoughtsRes.data) {
+      sb.from("agent_thoughts").select("*").eq("campaign_id", campaignId).order("step", { ascending: true }),
+      sb.from("events").select("*").eq("campaign_id", campaignId).order("created_at", { ascending: true }),
+      sb.from("campaigns").select("status").eq("id", campaignId).single(),
+    ]).then(([thoughtsRes, eventsRes, campaignRes]: any[]) => {
+      if (thoughtsRes?.data) {
         setThoughts((thoughtsRes.data as Record<string, unknown>[]).map((r, i) => rowToThought(r, i)));
       }
-      if (eventsRes.data) {
+      if (eventsRes?.data) {
         const mapped = (eventsRes.data as Record<string, unknown>[])
           .map((r, i) => rowToEvent(r, i))
           .filter((e): e is MockEvent => e !== null);
@@ -139,18 +132,19 @@ function LiveCampaign() {
           setScore((s) => Math.max(0, s + SCORE_DELTA[last.type]));
         }
       }
-      if (campaignRes.data?.status === "done" || campaignRes.data?.status === "complete") {
+      const status = campaignRes?.data?.status;
+      if (status === "done" || status === "complete") {
         setComplete(true);
       }
     });
 
     // Subscribe to new thoughts
-    const thoughtsSub = supabase
+    const thoughtsSub = sb
       .channel(`thoughts:${campaignId}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "agent_thoughts", filter: `campaign_id=eq.${campaignId}` },
-        (payload) => {
+        (payload: any) => {
           const row = payload.new as Record<string, unknown>;
           setThoughts((prev) => {
             const t = rowToThought(row, prev.length);
@@ -161,12 +155,12 @@ function LiveCampaign() {
       .subscribe();
 
     // Subscribe to new events
-    const eventsSub = supabase
+    const eventsSub = sb
       .channel(`events:${campaignId}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "events", filter: `campaign_id=eq.${campaignId}` },
-        (payload) => {
+        (payload: any) => {
           const row = payload.new as Record<string, unknown>;
           const ev = rowToEvent(row, 0);
           if (!ev) return;
@@ -180,8 +174,8 @@ function LiveCampaign() {
       .subscribe();
 
     return () => {
-      supabase?.removeChannel(thoughtsSub);
-      supabase?.removeChannel(eventsSub);
+      sb.removeChannel(thoughtsSub);
+      sb.removeChannel(eventsSub);
     };
   }, [isMock, campaignId]);
 
