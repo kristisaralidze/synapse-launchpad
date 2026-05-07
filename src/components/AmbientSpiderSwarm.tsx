@@ -176,20 +176,24 @@ function LegGroup({ leg, animate }: { leg: Leg; animate: boolean }) {
   const [tx, ty] = leg.tip;
   const delay = leg.group === "B" ? 0.25 : 0;
 
+  // Translate so hip is at (0,0), then rotation pivots around hip naturally.
+  const k = [kx - hx, ky - hy] as const;
+  const t = [tx - hx, ty - hy] as const;
+
   const content = (
     <>
-      <line x1={hx} y1={hy} x2={kx} y2={ky} stroke="#0A0A0A" strokeWidth="1.5" strokeLinecap="round" />
-      <line x1={kx} y1={ky} x2={tx} y2={ty} stroke="#0A0A0A" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1={0} y1={0} x2={k[0]} y2={k[1]} stroke="#0A0A0A" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1={k[0]} y1={k[1]} x2={t[0]} y2={t[1]} stroke="#0A0A0A" strokeWidth="1.5" strokeLinecap="round" />
     </>
   );
 
   if (!animate) {
-    return <g>{content}</g>;
+    return <g transform={`translate(${hx} ${hy})`}>{content}</g>;
   }
 
   return (
     <motion.g
-      style={{ transformOrigin: `${hx}px ${hy}px` }}
+      transform={`translate(${hx} ${hy})`}
       animate={{ rotate: [-6, 6, -6] }}
       transition={{ duration: 0.5, repeat: Infinity, ease: "easeInOut", delay }}
     >
