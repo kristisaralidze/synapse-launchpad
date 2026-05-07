@@ -13,23 +13,17 @@ type Instance = {
 };
 
 const INSTANCES: Instance[] = [
-  // Diagonal top-right -> bottom-left (classic)
+  // Diagonal top-right -> bottom-left. Head (SVG up) rotated to point down-left.
   {
-    size: 160, duration: 14, initialDelay: 0, rotate: 45,
+    size: 160, duration: 14, initialDelay: 0, rotate: -135,
     startX: "calc(100vw + 100px)", startY: "-260px",
     endX: "-260px", endY: "calc(100vh + 100px)",
   },
-  // Diagonal top-left -> bottom-right
+  // Diagonal top-left -> bottom-right. Head points down-right.
   {
     size: 140, duration: 17, initialDelay: 5, rotate: 135,
     startX: "-240px", startY: "-240px",
     endX: "calc(100vw + 100px)", endY: "calc(100vh + 100px)",
-  },
-  // Mostly downward with a slight rightward drift
-  {
-    size: 150, duration: 15, initialDelay: 9, rotate: 100,
-    startX: "20vw", startY: "-250px",
-    endX: "55vw", endY: "calc(100vh + 100px)",
   },
 ];
 
