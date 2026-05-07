@@ -5,15 +5,15 @@ type Instance = {
   size: number;
   duration: number;
   initialDelay: number;
-  laneOffset: number; // perpendicular offset from the diagonal path, in px
+  laneOffset: number;
 };
 
 const INSTANCES: Instance[] = [
-  { size: 22, duration: 9.0, initialDelay: 0.0, laneOffset: 0 },
-  { size: 18, duration: 10.5, initialDelay: 1.6, laneOffset: 40 },
-  { size: 26, duration: 8.4, initialDelay: 3.2, laneOffset: -30 },
-  { size: 16, duration: 11.2, initialDelay: 4.8, laneOffset: 70 },
-  { size: 20, duration: 9.6, initialDelay: 6.4, laneOffset: -55 },
+  { size: 22, duration: 10, initialDelay: 0.0, laneOffset: 0 },
+  { size: 18, duration: 11, initialDelay: 1.6, laneOffset: 40 },
+  { size: 26, duration: 9, initialDelay: 3.2, laneOffset: -30 },
+  { size: 16, duration: 13, initialDelay: 4.8, laneOffset: 70 },
+  { size: 20, duration: 9.5, initialDelay: 6.4, laneOffset: -55 },
 ];
 
 export function AmbientSpiderSwarm() {
@@ -69,13 +69,11 @@ function SpiderInstance({ size, duration, initialDelay, laneOffset }: Instance) 
   const startDelay = cycle === 0 ? initialDelay : 1 + Math.random() * 3;
 
   // Diagonal: top-right -> bottom-left
-  // Path direction unit vector
   const dx = -vp.w - 120;
   const dy = vp.h + 120;
   const len = Math.hypot(dx, dy);
   const ux = dx / len;
   const uy = dy / len;
-  // Perpendicular (for lane offset)
   const px = -uy;
   const py = ux;
 
@@ -84,8 +82,6 @@ function SpiderInstance({ size, duration, initialDelay, laneOffset }: Instance) 
   const endX = -120 + laneOffset * px;
   const endY = vp.h + 120 + laneOffset * py;
 
-  // Angle the spider so its "head" points along travel direction.
-  // SVG default head-up; rotate so up (-y) aligns with (ux, uy).
   const angleDeg = (Math.atan2(uy, ux) * 180) / Math.PI + 90;
 
   return (
@@ -109,37 +105,56 @@ function SpiderInstance({ size, duration, initialDelay, laneOffset }: Instance) 
     >
       <div
         style={{
+          position: "relative",
           width: size,
           height: size,
           transform: `rotate(${angleDeg}deg)`,
         }}
       >
-        <SpiderSVG size={size} />
+        {/* underglow */}
+        <div
+          style={{
+            position: "absolute",
+            inset: -size * 0.6,
+            background:
+              "radial-gradient(circle, rgba(185,28,28,0.18) 0%, transparent 70%)",
+            zIndex: -1,
+            pointerEvents: "none",
+          }}
+        />
+        <div
+          style={{
+            width: size,
+            height: size,
+            transform: "perspective(500px) rotateX(15deg)",
+            transformStyle: "preserve-3d",
+          }}
+        >
+          <SpiderSVG size={size} />
+        </div>
       </div>
     </motion.div>
   );
 }
 
-// Leg geometry in viewBox 60x60. Body centered at (30,30).
-// Each leg has hip on body edge, knee outside, tip further out.
 type Leg = {
   hip: [number, number];
   knee: [number, number];
   tip: [number, number];
-  group: "A" | "B";
+  phase: 0 | 1 | 2 | 3;
 };
 
+// Order: L1 L2 L3 L4 R1 R2 R3 R4
+// Phase 0: L1, R3 | Phase 1: L2, R4 | Phase 2: R1, L3 | Phase 3: R2, L4
 const LEGS: Leg[] = [
-  // Left side, front to back
-  { hip: [26, 26], knee: [14, 14], tip: [4, 18], group: "A" },
-  { hip: [25, 30], knee: [10, 28], tip: [2, 32], group: "B" },
-  { hip: [25, 33], knee: [10, 36], tip: [2, 42], group: "A" },
-  { hip: [26, 36], knee: [14, 46], tip: [4, 52], group: "B" },
-  // Right side
-  { hip: [34, 26], knee: [46, 14], tip: [56, 18], group: "B" },
-  { hip: [35, 30], knee: [50, 28], tip: [58, 32], group: "A" },
-  { hip: [35, 33], knee: [50, 36], tip: [58, 42], group: "B" },
-  { hip: [34, 36], knee: [46, 46], tip: [56, 52], group: "A" },
+  { hip: [26, 26], knee: [14, 14], tip: [4, 18], phase: 0 }, // L1
+  { hip: [25, 30], knee: [10, 28], tip: [2, 32], phase: 1 }, // L2
+  { hip: [25, 33], knee: [10, 36], tip: [2, 42], phase: 2 }, // L3
+  { hip: [26, 36], knee: [14, 46], tip: [4, 52], phase: 3 }, // L4
+  { hip: [34, 26], knee: [46, 14], tip: [56, 18], phase: 2 }, // R1
+  { hip: [35, 30], knee: [50, 28], tip: [58, 32], phase: 3 }, // R2
+  { hip: [35, 33], knee: [50, 36], tip: [58, 42], phase: 0 }, // R3
+  { hip: [34, 36], knee: [46, 46], tip: [56, 52], phase: 1 }, // R4
 ];
 
 function SpiderSVG({ size }: { size: number }) {
@@ -151,16 +166,17 @@ function SpiderSVG({ size }: { size: number }) {
       aria-hidden="true"
       style={{ display: "block", overflow: "visible" }}
     >
-      {/* Legs first (behind body) */}
       {LEGS.map((leg, i) => (
         <LegGroup key={i} leg={leg} />
       ))}
-      {/* Cephalothorax (front, smaller) */}
-      <ellipse cx="30" cy="26" rx="5" ry="4.5" fill="#0A0A0A" />
-      {/* Abdomen (rear, larger) */}
-      <ellipse cx="30" cy="35" rx="6.5" ry="7.5" fill="#0A0A0A" />
-      {/* Red dot marking */}
-      <circle cx="30" cy="36" r="1.6" fill="#B91C1C" />
+      <motion.g
+        animate={{ x: [-1.5, 1.5, -1.5] }}
+        transition={{ duration: 0.4, repeat: Infinity, ease: "easeInOut" }}
+      >
+        <ellipse cx="30" cy="26" rx="5" ry="4.5" fill="#0A0A0A" />
+        <ellipse cx="30" cy="35" rx="6.5" ry="7.5" fill="#0A0A0A" />
+        <circle cx="30" cy="36" r="1.6" fill="#B91C1C" />
+      </motion.g>
     </svg>
   );
 }
@@ -169,17 +185,22 @@ function LegGroup({ leg }: { leg: Leg }) {
   const [hx, hy] = leg.hip;
   const [kx, ky] = leg.knee;
   const [tx, ty] = leg.tip;
-  const delay = leg.group === "B" ? 0.3 : 0;
+  const delay = leg.phase * 0.1;
 
-  // Translate origin to hip so rotation pivots around the body attachment.
   const k = [kx - hx, ky - hy];
   const t = [tx - hx, ty - hy];
 
   return (
     <motion.g
       transform={`translate(${hx} ${hy})`}
-      animate={{ rotate: [-10, 10, -10] }}
-      transition={{ duration: 0.6, repeat: Infinity, ease: "easeInOut", delay }}
+      animate={{ rotate: [-18, 18, -18] }}
+      transition={{
+        duration: 0.4,
+        times: [0, 0.7, 1],
+        ease: ["easeOut", "easeIn"],
+        repeat: Infinity,
+        delay,
+      }}
     >
       <line
         x1={0}
