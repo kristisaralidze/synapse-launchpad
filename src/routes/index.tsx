@@ -62,32 +62,30 @@ function TargetsPage() {
         <h2 className="text-[16px] font-semibold text-[var(--color-text-primary)]">Add a target</h2>
         <form
           onSubmit={handleAdd}
-          className="mt-3 bg-surface border border-[var(--color-border-base)] rounded-lg p-6"
+          className="mt-3 bg-surface border border-[var(--color-border-base)] rounded-lg px-5 py-4"
         >
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1fr_1fr_auto] gap-3 items-end">
             {[
               { key: "name", label: "Full name", placeholder: "Jane Doe" },
               { key: "email", label: "Email", placeholder: "jane@company.com", mono: true },
               { key: "company", label: "Company", placeholder: "Acme Inc" },
               { key: "role", label: "Role", placeholder: "Product Manager" },
             ].map((f) => (
-              <div key={f.key} className="flex flex-col gap-1.5">
+              <div key={f.key} className="flex flex-col gap-1.5 min-w-0">
                 <label className="text-[12px] text-[var(--color-text-secondary)]">{f.label}</label>
                 <input
                   value={form[f.key as keyof typeof form]}
                   onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
                   placeholder={f.placeholder}
-                  className={`h-10 rounded-md border border-[var(--color-border-base)] bg-surface px-3 text-[15px] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:border-[var(--color-border-strong)] ${
+                  className={`h-10 w-full rounded-md border border-[var(--color-border-base)] bg-surface px-3 text-[15px] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)] focus:outline-none focus:border-[var(--color-border-strong)] ${
                     f.mono ? "font-mono text-[14px]" : ""
                   }`}
                 />
               </div>
             ))}
-          </div>
-          <div className="mt-5 flex justify-end">
             <button
               type="submit"
-              className="h-9 px-4 rounded-md bg-[#0A0A0A] text-white text-[14px] font-medium hover:bg-black/85"
+              className="h-10 px-4 rounded-md bg-[#0A0A0A] text-white text-[14px] font-medium hover:bg-black/85"
             >
               Add target
             </button>
@@ -121,11 +119,11 @@ function TargetsPage() {
               {(() => {
                 const s = scores[t.id] ?? 65;
                 return (
-                  <div className="w-20 flex flex-col items-start">
+                  <div className="w-16 flex flex-col items-end shrink-0 tabular-nums">
                     <span className="text-[11px] text-[var(--color-text-tertiary)]">Score</span>
                     <span
-                      className="font-mono text-[22px] font-semibold leading-none mt-0.5"
-                      style={{ color: scoreColor(s) }}
+                      className="font-mono text-[22px] font-semibold leading-none mt-0.5 tabular-nums"
+                      style={{ color: scoreColor(s), fontVariantNumeric: "tabular-nums" }}
                     >
                       {s}
                     </span>
@@ -136,7 +134,7 @@ function TargetsPage() {
 
               <button
                 onClick={() => setLaunchTarget(t)}
-                className="h-9 px-4 rounded-md bg-[var(--color-danger)] text-white text-[14px] font-medium hover:bg-[var(--color-danger-hover)]"
+                className="h-9 px-4 rounded-md bg-surface border border-[var(--color-danger)] text-[var(--color-danger)] text-[14px] font-medium transition-colors hover:bg-[var(--color-danger)] hover:text-white"
               >
                 Launch attack
               </button>
