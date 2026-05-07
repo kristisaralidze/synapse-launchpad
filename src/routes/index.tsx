@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell } from "@/components/synapse/AppShell";
 import { LaunchModal } from "@/components/synapse/LaunchModal";
-import type { Target } from "@/lib/synapse/types";
+import { scoreColor, scoreLabel, type Target } from "@/lib/synapse/types";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -15,23 +15,24 @@ export const Route = createFileRoute("/")({
 });
 
 const initialTargets: Target[] = [
-  { id: "t-001", name: "Jasper Gräfe", email: "jasper.graefe@celonis.com", company: "Celonis", role: "Customer Success Manager", score: 84, scoreLabel: "Vulnerable" },
-  { id: "t-002", name: "Anna Weber", email: "anna.weber@celonis.com", company: "Celonis", role: "Engineering Lead", score: 71, scoreLabel: "Strong" },
-  { id: "t-003", name: "Marc Lindqvist", email: "marc.lindqvist@celonis.com", company: "Celonis", role: "Sales Director", score: 52, scoreLabel: "Moderate" },
+  { id: "t-001", name: "Jasper Gräfe", email: "jasper.graefe@celonis.com", company: "Celonis", role: "Customer Success Manager" },
+  { id: "t-002", name: "Anna Weber", email: "anna.weber@celonis.com", company: "Celonis", role: "Engineering Lead" },
+  { id: "t-003", name: "Marc Lindqvist", email: "marc.lindqvist@celonis.com", company: "Celonis", role: "Sales Director" },
 ];
+
+const initialScores: Record<string, number> = {
+  "t-001": 84,
+  "t-002": 71,
+  "t-003": 52,
+};
 
 function initials(name: string) {
   return name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
 }
 
-function scoreColor(label: Target["scoreLabel"]) {
-  if (label === "Strong") return "var(--color-score-good)";
-  if (label === "Moderate") return "var(--color-score-warn)";
-  return "var(--color-score-bad)";
-}
-
 function TargetsPage() {
   const [targets, setTargets] = useState<Target[]>(initialTargets);
+  const [scores] = useState<Record<string, number>>(initialScores);
   const [form, setForm] = useState({ name: "", email: "", company: "", role: "" });
   const [launchTarget, setLaunchTarget] = useState<Target | null>(null);
 
@@ -41,8 +42,6 @@ function TargetsPage() {
     const t: Target = {
       id: `t-${Math.random().toString(36).slice(2, 8)}`,
       ...form,
-      score: 65,
-      scoreLabel: "Moderate",
     };
     setTargets((prev) => [...prev, t]);
     setForm({ name: "", email: "", company: "", role: "" });
@@ -119,16 +118,21 @@ function TargetsPage() {
                 </div>
               </div>
 
-              <div className="w-20 flex flex-col items-start">
-                <span className="text-[11px] text-[var(--color-text-tertiary)]">Score</span>
-                <span
-                  className="font-mono text-[22px] font-semibold leading-none mt-0.5"
-                  style={{ color: scoreColor(t.scoreLabel) }}
-                >
-                  {t.score}
-                </span>
-                <span className="text-[11px] text-[var(--color-text-tertiary)] mt-1">{t.scoreLabel}</span>
-              </div>
+              {(() => {
+                const s = scores[t.id] ?? 65;
+                return (
+                  <div className="w-20 flex flex-col items-start">
+                    <span className="text-[11px] text-[var(--color-text-tertiary)]">Score</span>
+                    <span
+                      className="font-mono text-[22px] font-semibold leading-none mt-0.5"
+                      style={{ color: scoreColor(s) }}
+                    >
+                      {s}
+                    </span>
+                    <span className="text-[11px] text-[var(--color-text-tertiary)] mt-1">{scoreLabel(s)}</span>
+                  </div>
+                );
+              })()}
 
               <button
                 onClick={() => setLaunchTarget(t)}
