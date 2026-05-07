@@ -15,8 +15,8 @@
   --color-text-primary: #0A0A0A;
   --color-text-secondary: #525252;
   --color-text-tertiary: #A3A3A3;
-  --color-accent: #B91C1C;
-  --color-accent-hover: #991B1B;
+  --color-danger: #B91C1C;
+  --color-danger-hover: #991B1B;
   --color-score-good: #15803D;
   --color-score-warn: #B45309;
   --color-score-bad: #B91C1C;
@@ -33,9 +33,9 @@
   --color-secondary-foreground: var(--color-text-primary);
   --color-muted: #F5F5F5;
   --color-muted-foreground: var(--color-text-secondary);
-  --color-accent-base: #F5F5F5;
+  --color-accent: #F5F5F5;
   --color-accent-foreground: var(--color-text-primary);
-  --color-destructive: var(--color-accent);
+  --color-destructive: #B91C1C;
   --color-destructive-foreground: #FFFFFF;
   --color-border: var(--color-border-base);
   --color-input: var(--color-border-base);
