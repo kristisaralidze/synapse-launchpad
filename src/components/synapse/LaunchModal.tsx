@@ -46,7 +46,7 @@ export function LaunchModal({
       } catch {
         // timeout or network error — fall through to demo
       }
-      if (!campaignId) campaignId = `demo-${target.id}-${Date.now()}`;
+      if (!campaignId) campaignId = mock-${Date.now()};
       onOpenChange(false);
       navigate({ to: "/live/$campaignId", params: { campaignId } });
     } finally {
