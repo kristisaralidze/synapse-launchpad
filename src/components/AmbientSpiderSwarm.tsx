@@ -54,7 +54,7 @@ export function AmbientSpiderSwarm() {
   );
 }
 
-function SpiderInstance({ size, duration, initialDelay }: Instance) {
+function SpiderInstance({ size, duration, initialDelay, startX, startY, endX, endY, rotate }: Instance) {
   const repeatDelay = useMemo(() => 2 + Math.random() * 3, []);
 
   return (
@@ -68,11 +68,8 @@ function SpiderInstance({ size, duration, initialDelay }: Instance) {
         pointerEvents: "none",
         zIndex: 50,
       }}
-      initial={{ x: `calc(100vw + 100px)`, y: `-${size + 100}px` }}
-      animate={{
-        x: [`calc(100vw + 100px)`, `-${size + 100}px`],
-        y: [`-${size + 100}px`, `calc(100vh + 100px)`],
-      }}
+      initial={{ x: startX, y: startY }}
+      animate={{ x: [startX, endX], y: [startY, endY] }}
       transition={{
         duration,
         delay: initialDelay,
@@ -82,7 +79,7 @@ function SpiderInstance({ size, duration, initialDelay }: Instance) {
       }}
       aria-hidden="true"
     >
-      <div style={{ width: size, height: size, transform: "rotate(45deg)" }}>
+      <div style={{ width: size, height: size, transform: `rotate(${rotate}deg)` }}>
         <SpiderSVG size={size} />
       </div>
     </motion.div>
