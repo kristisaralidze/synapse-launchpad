@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { useNavigate } from "@tanstack/react-router";
 import type { Target } from "@/lib/synapse/types";
+import { API_BASE } from "@/lib/synapse/supabase";
 
 const SCENARIOS = [
   "Conference Followup",
@@ -45,11 +46,10 @@ export function LaunchModal({
     if (!target) return;
     setSubmitting(true);
     try {
-      const base = import.meta.env.VITE_API_BASE;
       let campaignId: string | undefined;
-      if (base) {
+      if (API_BASE) {
         try {
-          const res = await fetch(`${base}/api/campaign/start`, {
+          const res = await fetch(`${API_BASE}/api/campaign/start`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
