@@ -60,7 +60,7 @@ export function LaunchModal({
           });
           if (res.ok) {
             const data = await res.json().catch(() => ({}));
-            campaignId = data.campaign_id;
+            campaignId = data?.data?.campaign?.id ?? data?.campaign_id;
           }
         } catch {
           /* mock fallback */

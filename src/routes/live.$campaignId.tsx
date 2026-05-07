@@ -13,6 +13,7 @@ import {
   type MockEvent,
   type MockThought,
 } from "@/lib/synapse/mockPlayback";
+import { supabase } from "@/lib/synapse/supabase";
 
 export const Route = createFileRoute("/live/$campaignId")({
   head: () => ({
@@ -21,7 +22,52 @@ export const Route = createFileRoute("/live/$campaignId")({
   component: LiveCampaign,
 });
 
+function rowToThought(row: Record<string, unknown>, idx: number): MockThought {
+  return {
+    step: typeof row.step === "number" ? row.step : idx + 1,
+    time: row.created_at
+      ? new Date(row.created_at as string).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+      : "--:--:--",
+    reasoning: (row.reasoning as string) ?? "",
+    action: (row.action as string) ?? "",
+    observation: (row.observation as string) ?? "",
+  };
+}
+
+function rowToEvent(row: Record<string, unknown>, idx: number): MockEvent | null {
+  const type = row.event_type as string | undefined;
+  if (!type) return null;
+  // Map backend event_type → MockEventType
+  const typeMap: Record<string, MockEvent["type"]> = {
+    email_delivered: "delivered",
+    delivered: "delivered",
+    opened: "opened",
+    clicked: "clicked",
+    credentials_entered: "credentials_entered",
+    training_delivered: "training_delivered",
+  };
+  const evType: MockEvent["type"] = typeMap[type] ?? "delivered";
+  const descriptions: Record<string, string> = {
+    delivered: "Lure email delivered",
+    opened: "Email opened",
+    clicked: "Link clicked",
+    credentials_entered: "Credentials entered — simulation complete",
+    training_delivered: "Awareness training delivered",
+  };
+  return {
+    id: (row.id as string) ?? `ev-${idx}`,
+    type: evType,
+    description: descriptions[evType] ?? type,
+    time: row.created_at
+      ? new Date(row.created_at as string).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+      : "--:--:--",
+  };
+}
+
 function LiveCampaign() {
+  const { campaignId } = Route.useParams();
+  const isMock = campaignId.startsWith("mock-");
+
   const [thoughts, setThoughts] = useState<MockThought[]>([]);
   const [events, setEvents] = useState<MockEvent[]>([]);
   const [score, setScore] = useState(100);
@@ -37,7 +83,9 @@ function LiveCampaign() {
     setRunId((n) => n + 1);
   }, []);
 
+  // Mock playback for demo campaigns
   useEffect(() => {
+    if (!isMock) return;
     const timers: ReturnType<typeof setTimeout>[] = [];
     for (const step of PLAYBACK_TIMELINE) {
       const t = setTimeout(() => {
@@ -54,7 +102,88 @@ function LiveCampaign() {
       timers.push(t);
     }
     return () => timers.forEach(clearTimeout);
-  }, [runId]);
+  }, [isMock, runId]);
+
+  // Real Supabase realtime for live campaigns
+  useEffect(() => {
+    if (isMock || !supabase) return;
+
+    // Load existing rows first
+    Promise.all([
+      supabase
+        .from("agent_thoughts")
+        .select("*")
+        .eq("campaign_id", campaignId)
+        .order("step", { ascending: true }),
+      supabase
+        .from("events")
+        .select("*")
+        .eq("campaign_id", campaignId)
+        .order("created_at", { ascending: true }),
+      supabase
+        .from("campaigns")
+        .select("status")
+        .eq("id", campaignId)
+        .single(),
+    ]).then(([thoughtsRes, eventsRes, campaignRes]) => {
+      if (thoughtsRes.data) {
+        setThoughts((thoughtsRes.data as Record<string, unknown>[]).map((r, i) => rowToThought(r, i)));
+      }
+      if (eventsRes.data) {
+        const mapped = (eventsRes.data as Record<string, unknown>[])
+          .map((r, i) => rowToEvent(r, i))
+          .filter((e): e is MockEvent => e !== null);
+        setEvents(mapped.reverse());
+        const last = mapped[mapped.length - 1];
+        if (last) {
+          setScore((s) => Math.max(0, s + SCORE_DELTA[last.type]));
+        }
+      }
+      if (campaignRes.data?.status === "done" || campaignRes.data?.status === "complete") {
+        setComplete(true);
+      }
+    });
+
+    // Subscribe to new thoughts
+    const thoughtsSub = supabase
+      .channel(`thoughts:${campaignId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "agent_thoughts", filter: `campaign_id=eq.${campaignId}` },
+        (payload) => {
+          const row = payload.new as Record<string, unknown>;
+          setThoughts((prev) => {
+            const t = rowToThought(row, prev.length);
+            return [...prev, t];
+          });
+        }
+      )
+      .subscribe();
+
+    // Subscribe to new events
+    const eventsSub = supabase
+      .channel(`events:${campaignId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "events", filter: `campaign_id=eq.${campaignId}` },
+        (payload) => {
+          const row = payload.new as Record<string, unknown>;
+          const ev = rowToEvent(row, 0);
+          if (!ev) return;
+          setEvents((prev) => [ev, ...prev]);
+          setScore((s) => Math.max(0, s + SCORE_DELTA[ev.type]));
+          if (ev.type === "credentials_entered" || ev.type === "training_delivered") {
+            setComplete(true);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(thoughtsSub);
+      supabase.removeChannel(eventsSub);
+    };
+  }, [isMock, campaignId]);
 
   // Auto-scroll thoughts column to bottom on new arrival.
   useEffect(() => {

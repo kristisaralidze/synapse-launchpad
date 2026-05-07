@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppShell } from "@/components/synapse/AppShell";
 import { LaunchModal } from "@/components/synapse/LaunchModal";
 import { scoreColor, scoreLabel, type Target } from "@/lib/synapse/types";
+import { API_BASE } from "@/lib/synapse/supabase";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -14,13 +15,13 @@ export const Route = createFileRoute("/")({
   component: TargetsPage,
 });
 
-const initialTargets: Target[] = [
+const FALLBACK_TARGETS: Target[] = [
   { id: "t-001", name: "Jasper Gräfe", email: "jasper.graefe@celonis.com", company: "Celonis", role: "Customer Success Manager" },
   { id: "t-002", name: "Anna Weber", email: "anna.weber@celonis.com", company: "Celonis", role: "Engineering Lead" },
   { id: "t-003", name: "Marc Lindqvist", email: "marc.lindqvist@celonis.com", company: "Celonis", role: "Sales Director" },
 ];
 
-const initialScores: Record<string, number> = {
+const FALLBACK_SCORES: Record<string, number> = {
   "t-001": 84,
   "t-002": 71,
   "t-003": 52,
@@ -31,10 +32,37 @@ function initials(name: string) {
 }
 
 function TargetsPage() {
-  const [targets, setTargets] = useState<Target[]>(initialTargets);
-  const [scores] = useState<Record<string, number>>(initialScores);
+  const [targets, setTargets] = useState<Target[]>(FALLBACK_TARGETS);
+  const [scores, setScores] = useState<Record<string, number>>(FALLBACK_SCORES);
   const [form, setForm] = useState({ name: "", email: "", company: "", role: "" });
   const [launchTarget, setLaunchTarget] = useState<Target | null>(null);
+
+  useEffect(() => {
+    if (!API_BASE) return;
+    fetch(`${API_BASE}/api/targets`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (!data?.data?.length) return;
+        const fetched: Target[] = data.data;
+        setTargets(fetched);
+        // fetch scores for each target
+        Promise.all(
+          fetched.map((t) =>
+            fetch(`${API_BASE}/api/scores/${t.id}`)
+              .then((r) => r.ok ? r.json() : null)
+              .then((s) => s?.data?.score != null ? [t.id, s.data.score] as [string, number] : null)
+              .catch(() => null)
+          )
+        ).then((results) => {
+          const scoreMap: Record<string, number> = {};
+          for (const r of results) {
+            if (r) scoreMap[r[0]] = r[1];
+          }
+          if (Object.keys(scoreMap).length > 0) setScores(scoreMap);
+        });
+      })
+      .catch(() => { /* keep fallback */ });
+  }, []);
 
   function handleAdd(e: React.FormEvent) {
     e.preventDefault();
