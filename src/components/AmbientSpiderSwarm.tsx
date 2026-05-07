@@ -72,14 +72,14 @@ function SpiderInstance({ size, duration, initialDelay }: Instance) {
 }
 
 const LEGS = [
-  { points: "92,80 70,55 40,30 10,15", hip: [92, 80] as const },
-  { points: "86,92 55,80 25,75 5,72", hip: [86, 92] as const },
-  { points: "86,108 55,122 25,130 5,138", hip: [86, 108] as const },
-  { points: "92,118 70,142 40,168 10,185", hip: [92, 118] as const },
-  { points: "108,80 130,55 160,30 190,15", hip: [108, 80] as const },
-  { points: "114,92 145,80 175,75 195,72", hip: [114, 92] as const },
-  { points: "114,108 145,122 175,130 195,138", hip: [114, 108] as const },
-  { points: "108,118 130,142 160,168 190,185", hip: [108, 118] as const },
+  { points: "100,90 70,55 40,30 10,15", hip: [100, 90] as const },
+  { points: "100,96 55,80 25,75 5,72", hip: [100, 96] as const },
+  { points: "100,102 55,122 25,130 5,138", hip: [100, 102] as const },
+  { points: "100,108 70,142 40,168 10,185", hip: [100, 108] as const },
+  { points: "100,90 130,55 160,30 190,15", hip: [100, 90] as const },
+  { points: "100,96 145,80 175,75 195,72", hip: [100, 96] as const },
+  { points: "100,102 145,122 175,130 195,138", hip: [100, 102] as const },
+  { points: "100,108 130,142 160,168 190,185", hip: [100, 108] as const },
 ];
 
 function SpiderSVG({ size }: { size: number }) {
@@ -102,20 +102,20 @@ function SpiderSVG({ size }: { size: number }) {
       aria-hidden="true"
       style={{ display: "block", overflow: "visible" }}
     >
-      {/* Body — drawn first, behind legs */}
+      {/* Whole spider sways together so legs stay anchored to the body */}
       <motion.g
         animate={{ x: [-2, 2, -2] }}
         transition={{ duration: 0.42, repeat: Infinity, ease: "easeInOut" }}
       >
+        {/* Body — drawn first, behind legs */}
         <ellipse cx="100" cy="86" rx="14" ry="12" fill="#0A0A0A" />
         <ellipse cx="100" cy="112" rx="18" ry="22" fill="#0A0A0A" />
         <line x1="100" y1="96" x2="100" y2="92" stroke="#0A0A0A" strokeWidth="2" />
         <circle cx="95" cy="80" r="1.5" fill="#525252" />
         <circle cx="105" cy="80" r="1.5" fill="#525252" />
-      </motion.g>
 
-      {/* Legs — each on its own clock, rotating around its hip */}
-      {LEGS.map((leg, i) => {
+        {/* Legs — each on its own clock, rotating around its hip */}
+        {LEGS.map((leg, i) => {
         const cfg = legConfigs[i];
         const [hx, hy] = leg.hip;
         return (
@@ -140,7 +140,8 @@ function SpiderSVG({ size }: { size: number }) {
             />
           </motion.g>
         );
-      })}
+        })}
+      </motion.g>
     </svg>
   );
 }
