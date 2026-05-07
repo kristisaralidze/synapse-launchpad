@@ -189,7 +189,7 @@ function LegGroup({ leg, animate }: { leg: Leg; animate: boolean }) {
 
   return (
     <motion.g
-      style={{ transformOrigin: `${hx}px ${hy}px`, transformBox: "fill-box" as const }}
+      style={{ transformOrigin: `${hx}px ${hy}px` }}
       animate={{ rotate: [-6, 6, -6] }}
       transition={{ duration: 0.5, repeat: Infinity, ease: "easeInOut", delay }}
     >
