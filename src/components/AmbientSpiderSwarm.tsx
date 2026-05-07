@@ -5,14 +5,32 @@ type Instance = {
   size: number;
   duration: number;
   initialDelay: number;
+  startX: string;
+  startY: string;
+  endX: string;
+  endY: string;
+  rotate: number;
 };
 
 const INSTANCES: Instance[] = [
-  { size: 160, duration: 14, initialDelay: 0 },
-  { size: 140, duration: 16, initialDelay: 3 },
-  { size: 175, duration: 13, initialDelay: 6.5 },
-  { size: 130, duration: 17, initialDelay: 10 },
-  { size: 155, duration: 15, initialDelay: 13.5 },
+  // Diagonal top-right -> bottom-left (classic)
+  {
+    size: 160, duration: 14, initialDelay: 0, rotate: 45,
+    startX: "calc(100vw + 100px)", startY: "-260px",
+    endX: "-260px", endY: "calc(100vh + 100px)",
+  },
+  // Diagonal top-left -> bottom-right
+  {
+    size: 140, duration: 17, initialDelay: 5, rotate: 135,
+    startX: "-240px", startY: "-240px",
+    endX: "calc(100vw + 100px)", endY: "calc(100vh + 100px)",
+  },
+  // Mostly downward with a slight rightward drift
+  {
+    size: 150, duration: 15, initialDelay: 9, rotate: 100,
+    startX: "20vw", startY: "-250px",
+    endX: "55vw", endY: "calc(100vh + 100px)",
+  },
 ];
 
 export function AmbientSpiderSwarm() {
