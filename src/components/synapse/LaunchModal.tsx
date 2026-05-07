@@ -42,12 +42,13 @@ export function LaunchModal({
   if (!target) return null;
 
   async function handleLaunch() {
+    const apiUrl = "https://hackathon-plum-seven.vercel.app";
     if (!target) return;
     setSubmitting(true);
     try {
       let campaignId: string | undefined;
       try {
-        const res = await fetch("https://hackathon-plum-seven.vercel.app/api/campaign/start", {
+        const res = await fetch(apiUrl + "/api/campaign/start", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ target_id: target.id, scenario, demo_mode: demoMode }),
