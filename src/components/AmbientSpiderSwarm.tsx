@@ -102,20 +102,20 @@ function SpiderSVG({ size }: { size: number }) {
       aria-hidden="true"
       style={{ display: "block", overflow: "visible" }}
     >
-      {/* Body — drawn first, behind legs */}
+      {/* Whole spider sways together so legs stay anchored to the body */}
       <motion.g
         animate={{ x: [-2, 2, -2] }}
         transition={{ duration: 0.42, repeat: Infinity, ease: "easeInOut" }}
       >
+        {/* Body — drawn first, behind legs */}
         <ellipse cx="100" cy="86" rx="14" ry="12" fill="#0A0A0A" />
         <ellipse cx="100" cy="112" rx="18" ry="22" fill="#0A0A0A" />
         <line x1="100" y1="96" x2="100" y2="92" stroke="#0A0A0A" strokeWidth="2" />
         <circle cx="95" cy="80" r="1.5" fill="#525252" />
         <circle cx="105" cy="80" r="1.5" fill="#525252" />
-      </motion.g>
 
-      {/* Legs — each on its own clock, rotating around its hip */}
-      {LEGS.map((leg, i) => {
+        {/* Legs — each on its own clock, rotating around its hip */}
+        {LEGS.map((leg, i) => {
         const cfg = legConfigs[i];
         const [hx, hy] = leg.hip;
         return (
@@ -140,7 +140,8 @@ function SpiderSVG({ size }: { size: number }) {
             />
           </motion.g>
         );
-      })}
+        })}
+      </motion.g>
     </svg>
   );
 }
