@@ -14,6 +14,111 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_thoughts: {
+        Row: {
+          action: string | null
+          campaign_id: string
+          created_at: string
+          id: string
+          observation: string | null
+          reasoning: string | null
+          step: number
+        }
+        Insert: {
+          action?: string | null
+          campaign_id: string
+          created_at?: string
+          id?: string
+          observation?: string | null
+          reasoning?: string | null
+          step?: number
+        }
+        Update: {
+          action?: string | null
+          campaign_id?: string
+          created_at?: string
+          id?: string
+          observation?: string | null
+          reasoning?: string | null
+          step?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_thoughts_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          created_at: string
+          demo_mode: boolean
+          id: string
+          scenario: string | null
+          status: string
+          target_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          demo_mode?: boolean
+          id?: string
+          scenario?: string | null
+          status?: string
+          target_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          demo_mode?: boolean
+          id?: string
+          scenario?: string | null
+          status?: string
+          target_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "targets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          payload?: Json | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scores: {
         Row: {
           created_at: string
