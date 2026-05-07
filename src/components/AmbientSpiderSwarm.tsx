@@ -72,14 +72,14 @@ function SpiderInstance({ size, duration, initialDelay }: Instance) {
 }
 
 const LEGS = [
-  { points: "92,80 70,55 40,30 10,15", hip: [92, 80] as const },
-  { points: "86,92 55,80 25,75 5,72", hip: [86, 92] as const },
-  { points: "86,108 55,122 25,130 5,138", hip: [86, 108] as const },
-  { points: "92,118 70,142 40,168 10,185", hip: [92, 118] as const },
-  { points: "108,80 130,55 160,30 190,15", hip: [108, 80] as const },
-  { points: "114,92 145,80 175,75 195,72", hip: [114, 92] as const },
-  { points: "114,108 145,122 175,130 195,138", hip: [114, 108] as const },
-  { points: "108,118 130,142 160,168 190,185", hip: [108, 118] as const },
+  { points: "100,90 70,55 40,30 10,15", hip: [100, 90] as const },
+  { points: "100,96 55,80 25,75 5,72", hip: [100, 96] as const },
+  { points: "100,102 55,122 25,130 5,138", hip: [100, 102] as const },
+  { points: "100,108 70,142 40,168 10,185", hip: [100, 108] as const },
+  { points: "100,90 130,55 160,30 190,15", hip: [100, 90] as const },
+  { points: "100,96 145,80 175,75 195,72", hip: [100, 96] as const },
+  { points: "100,102 145,122 175,130 195,138", hip: [100, 102] as const },
+  { points: "100,108 130,142 160,168 190,185", hip: [100, 108] as const },
 ];
 
 function SpiderSVG({ size }: { size: number }) {
